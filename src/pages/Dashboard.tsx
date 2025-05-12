@@ -46,16 +46,15 @@ const Dashboard = () => {
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
   
   // Date range state for quick stats
-  const [dateRange, setDateRange] = useState<{
-    from: Date;
-    to: Date;
-  }>({
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1), // First day of current month
-    to: new Date() // Today
-  });
+  const [fromDate, setFromDate] = useState<Date | undefined>(new Date(new Date().getFullYear(), new Date().getMonth(), 1)); // First day of current month
+  const [toDate, setToDate] = useState<Date | undefined>(new Date()); // Today
   
-  const [quickStats, setQuickStats] = useState<QuickStats>(generateQuickStats(dateRange.from, dateRange.to));
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [quickStats, setQuickStats] = useState<QuickStats>(
+    generateQuickStats(
+      fromDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1), 
+      toDate || new Date()
+    )
+  );
   
   useEffect(() => {
     // Update current time every minute
@@ -74,8 +73,14 @@ const Dashboard = () => {
   
   // Update quick stats when date range changes
   useEffect(() => {
-    setQuickStats(generateQuickStats(dateRange.from, dateRange.to));
-  }, [dateRange]);
+    if (fromDate && toDate) {
+      setQuickStats(generateQuickStats(fromDate, toDate));
+    } else if (fromDate) {
+      setQuickStats(generateQuickStats(fromDate, new Date()));
+    } else if (toDate) {
+      setQuickStats(generateQuickStats(new Date(new Date().getFullYear(), new Date().getMonth(), 1), toDate));
+    }
+  }, [fromDate, toDate]);
   
   const renderAttendanceStatus = () => {
     if (!todayAttendance || todayAttendance.status === 'weekend') {
@@ -128,12 +133,9 @@ const Dashboard = () => {
     );
   };
   
-  const formatDateRange = () => {
-    if (!dateRange.from || !dateRange.to) {
-      return "Select a date range";
-    }
-    
-    return `${format(dateRange.from, "MMM d, yyyy")} - ${format(dateRange.to, "MMM d, yyyy")}`;
+  const resetFilters = () => {
+    setFromDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)); // First day of current month
+    setToDate(new Date()); // Today
   };
   
   return (
@@ -163,38 +165,88 @@ const Dashboard = () => {
         </Card>
         
         <Card className="mb-6">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Quick Stats</CardTitle>
-              <CardDescription>Summary for selected period</CardDescription>
-            </div>
-            
-            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="h-8 border-dashed">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formatDateRange()}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange.from}
-                  selected={dateRange}
-                  onSelect={(range) => {
-                    if (range?.from && range?.to) {
-                      setDateRange(range as {from: Date, to: Date});
-                      setIsCalendarOpen(false);
-                    }
-                  }}
-                  numberOfMonths={2}
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Quick Stats</CardTitle>
+            <CardDescription>Summary for selected period</CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="mb-4">
+              <div className="flex flex-wrap gap-3">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium mb-1">From Date</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                        {fromDate ? format(fromDate, 'MMM d, yyyy') : (
+                          <span className="text-muted-foreground">Pick a date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={fromDate}
+                        onSelect={setFromDate}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium mb-1">To Date</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                        {toDate ? format(toDate, 'MMM d, yyyy') : (
+                          <span className="text-muted-foreground">Pick a date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={toDate}
+                        onSelect={setToDate}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                        disabled={(date) => fromDate ? date < fromDate : false}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                <div className="flex items-end">
+                  <Button 
+                    variant="ghost" 
+                    onClick={resetFilters} 
+                    className="h-10"
+                    disabled={!fromDate && !toDate}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="mt-2">
+                {fromDate && toDate ? (
+                  <p className="text-sm text-muted-foreground">
+                    Showing results from {format(fromDate, 'MMM d, yyyy')} to {format(toDate, 'MMM d, yyyy')}
+                  </p>
+                ) : fromDate ? (
+                  <p className="text-sm text-muted-foreground">
+                    Showing results from {format(fromDate, 'MMM d, yyyy')} onwards
+                  </p>
+                ) : toDate ? (
+                  <p className="text-sm text-muted-foreground">
+                    Showing results until {format(toDate, 'MMM d, yyyy')}
+                  </p>
+                ) : null}
+              </div>
+            </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-blue-50 rounded-lg p-3 text-center">
                 <p className="text-gray-600 text-xs">Days Worked</p>

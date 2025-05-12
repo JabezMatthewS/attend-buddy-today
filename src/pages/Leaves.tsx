@@ -4,9 +4,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import Header from '@/components/Header';
 import Navigation from '@/components/Navigation';
 import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
 
 interface Leave {
   id: string;
@@ -84,17 +88,49 @@ const getLeaveTypeColor = (type: Leave['type']): string => {
 const Leaves = () => {
   const { user } = useAuth();
   const [leaves, setLeaves] = useState<Leave[]>([]);
+  const [filteredLeaves, setFilteredLeaves] = useState<Leave[]>([]);
+  const [fromDate, setFromDate] = useState<Date | undefined>();
+  const [toDate, setToDate] = useState<Date | undefined>();
   
   useEffect(() => {
     if (user?.id) {
       const mockLeaves = generateMockLeaves(user.id);
       setLeaves(mockLeaves);
+      setFilteredLeaves(mockLeaves);
     }
   }, [user?.id]);
   
+  useEffect(() => {
+    // Filter leaves based on selected date range
+    if (fromDate || toDate) {
+      const filtered = leaves.filter(leave => {
+        const leaveDate = new Date(leave.date);
+        
+        if (fromDate && toDate) {
+          return leaveDate >= fromDate && leaveDate <= toDate;
+        } else if (fromDate) {
+          return leaveDate >= fromDate;
+        } else if (toDate) {
+          return leaveDate <= toDate;
+        }
+        
+        return true;
+      });
+      
+      setFilteredLeaves(filtered);
+    } else {
+      setFilteredLeaves(leaves);
+    }
+  }, [fromDate, toDate, leaves]);
+  
+  const resetFilters = () => {
+    setFromDate(undefined);
+    setToDate(undefined);
+  };
+  
   // Group leaves by month
   const groupedLeaves: Record<string, Leave[]> = {};
-  leaves.forEach(leave => {
+  filteredLeaves.forEach(leave => {
     const date = new Date(leave.date);
     const monthYear = format(date, 'MMMM yyyy');
     
@@ -109,6 +145,92 @@ const Leaves = () => {
       <Header title="Leave History" />
       
       <main className="container mx-auto px-4 py-6">
+        <Card className="mb-6">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Date Filter</CardTitle>
+            <CardDescription>
+              Select a date range to filter
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-3">
+              <div className="flex flex-col">
+                <span className="text-sm font-medium mb-1">From Date</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                      {fromDate ? format(fromDate, 'MMM d, yyyy') : (
+                        <span className="text-muted-foreground">Pick a date</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={fromDate}
+                      onSelect={setFromDate}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="flex flex-col">
+                <span className="text-sm font-medium mb-1">To Date</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                      {toDate ? format(toDate, 'MMM d, yyyy') : (
+                        <span className="text-muted-foreground">Pick a date</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={toDate}
+                      onSelect={setToDate}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                      disabled={(date) => fromDate ? date < fromDate : false}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="flex items-end">
+                <Button 
+                  variant="ghost" 
+                  onClick={resetFilters} 
+                  className="h-10"
+                  disabled={!fromDate && !toDate}
+                >
+                  Reset
+                </Button>
+              </div>
+            </div>
+            
+            <div className="mt-2">
+              {fromDate && toDate ? (
+                <p className="text-sm text-muted-foreground">
+                  Showing results from {format(fromDate, 'MMM d, yyyy')} to {format(toDate, 'MMM d, yyyy')}
+                </p>
+              ) : fromDate ? (
+                <p className="text-sm text-muted-foreground">
+                  Showing results from {format(fromDate, 'MMM d, yyyy')} onwards
+                </p>
+              ) : toDate ? (
+                <p className="text-sm text-muted-foreground">
+                  Showing results until {format(toDate, 'MMM d, yyyy')}
+                </p>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+        
         {Object.keys(groupedLeaves).length > 0 ? (
           Object.keys(groupedLeaves).map(month => (
             <Card key={month} className="mb-6">
