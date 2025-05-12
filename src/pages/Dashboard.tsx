@@ -10,8 +10,6 @@ import { CalendarIcon, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import Navigation from '@/components/Navigation';
 import { formatTime, getTodayAttendance, AttendanceRecord } from '@/utils/attendanceUtils';
-import { useIsMobile } from '@/hooks/use-mobile';
-import DashboardMobileWidget from '@/components/DashboardMobileWidget';
 
 // Interface for quick stats
 interface QuickStats {
@@ -46,7 +44,6 @@ const Dashboard = () => {
   const { user } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
-  const isMobile = useIsMobile();
   
   // Date range state for quick stats
   const [fromDate, setFromDate] = useState<Date | undefined>(new Date(new Date().getFullYear(), new Date().getMonth(), 1)); // First day of current month
@@ -140,19 +137,6 @@ const Dashboard = () => {
     setFromDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1)); // First day of current month
     setToDate(new Date()); // Today
   };
-  
-  // If mobile view, render the mobile widget
-  if (isMobile) {
-    return (
-      <div className="min-h-screen bg-gray-50 pb-20">
-        <Header title="Dashboard" />
-        <main className="container mx-auto px-4 py-6">
-          <DashboardMobileWidget />
-        </main>
-        <Navigation />
-      </div>
-    );
-  }
   
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
