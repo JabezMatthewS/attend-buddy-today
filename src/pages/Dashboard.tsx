@@ -10,6 +10,32 @@ import Navigation from '@/components/Navigation';
 import { formatTime, getTodayAttendance, AttendanceRecord } from '@/utils/attendanceUtils';
 import { Clock, CheckCircle, AlertCircle } from 'lucide-react';
 
+// Mock data for quick stats
+interface QuickStats {
+  daysWorked: number;
+  sickHolidays: number;
+  personalLeaves: number;
+  absentDays: number;
+  totalDays: number;
+}
+
+// Generate mock stats
+const generateQuickStats = (): QuickStats => {
+  const daysWorked = 18;
+  const sickHolidays = 1;
+  const personalLeaves = 2;
+  const absentDays = 1;
+  const totalDays = daysWorked + sickHolidays + personalLeaves + absentDays;
+  
+  return {
+    daysWorked,
+    sickHolidays,
+    personalLeaves,
+    absentDays,
+    totalDays
+  };
+};
+
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -18,6 +44,7 @@ const Dashboard = () => {
   const [checkedInToday, setCheckedInToday] = useState(false);
   const [checkedOutToday, setCheckedOutToday] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [quickStats] = useState<QuickStats>(generateQuickStats());
   
   useEffect(() => {
     // Update current time every minute
@@ -190,36 +217,50 @@ const Dashboard = () => {
         <Card className="mb-6">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Quick Stats</CardTitle>
-            <CardDescription>This month's attendance</CardDescription>
+            <CardDescription>This month's summary</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-green-50 rounded-lg p-3 text-center">
-                <p className="text-gray-600 text-sm">On Time</p>
-                <p className="text-2xl font-bold text-green-600">8</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-blue-50 rounded-lg p-3 text-center">
+                <p className="text-gray-600 text-xs">Days Worked</p>
+                <p className="text-xl font-bold text-blue-600">{quickStats.daysWorked}</p>
               </div>
               <div className="bg-amber-50 rounded-lg p-3 text-center">
-                <p className="text-gray-600 text-sm">Late</p>
-                <p className="text-2xl font-bold text-amber-600">2</p>
-              </div>
-              <div className="bg-blue-50 rounded-lg p-3 text-center">
-                <p className="text-gray-600 text-sm">Work Hours</p>
-                <p className="text-2xl font-bold text-blue-600">71h</p>
+                <p className="text-gray-600 text-xs">SH</p>
+                <p className="text-xl font-bold text-amber-600">{quickStats.sickHolidays}</p>
               </div>
               <div className="bg-purple-50 rounded-lg p-3 text-center">
-                <p className="text-gray-600 text-sm">Attendance</p>
-                <p className="text-2xl font-bold text-purple-600">95%</p>
+                <p className="text-gray-600 text-xs">PL</p>
+                <p className="text-xl font-bold text-purple-600">{quickStats.personalLeaves}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div className="bg-red-50 rounded-lg p-3 text-center">
+                <p className="text-gray-600 text-xs">Absent</p>
+                <p className="text-xl font-bold text-red-600">{quickStats.absentDays}</p>
+              </div>
+              <div className="bg-green-50 rounded-lg p-3 text-center">
+                <p className="text-gray-600 text-xs">Total</p>
+                <p className="text-xl font-bold text-green-600">{quickStats.totalDays}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Button 
-          className="w-full bg-primary/90 hover:bg-primary"
-          onClick={() => navigate('/attendance-history')}
-        >
-          View Full History
-        </Button>
+        <div className="grid grid-cols-2 gap-4">
+          <Button 
+            className="bg-primary/90 hover:bg-primary"
+            onClick={() => navigate('/attendance-history')}
+          >
+            View History
+          </Button>
+          <Button 
+            className="bg-primary/90 hover:bg-primary"
+            onClick={() => navigate('/leaves')}
+          >
+            View Leaves
+          </Button>
+        </div>
       </main>
       
       <Navigation />

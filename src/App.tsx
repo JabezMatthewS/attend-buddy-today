@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import AttendanceHistory from "./pages/AttendanceHistory";
+import Leaves from "./pages/Leaves";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,11 @@ const App = () => (
             <Route path="/attendance-history" element={
               <ProtectedRoute>
                 <AttendanceHistory />
+              </ProtectedRoute>
+            } />
+            <Route path="/leaves" element={
+              <ProtectedRoute>
+                <Leaves />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />
