@@ -1,11 +1,29 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Redirect based on authentication status
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Show loading screen while redirecting
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+        <div className="animate-pulse-light">
+          <h1 className="text-3xl font-bold text-primary mb-2">AttendanceTrack</h1>
+          <p className="text-gray-600">Loading...</p>
+        </div>
       </div>
     </div>
   );
