@@ -1,16 +1,17 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/components/ui/use-toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { CalendarIcon, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import Navigation from '@/components/Navigation';
 import { formatTime, getTodayAttendance, AttendanceRecord } from '@/utils/attendanceUtils';
-import { Clock, CheckCircle, AlertCircle } from 'lucide-react';
 
-// Mock data for quick stats
+// Interface for quick stats
 interface QuickStats {
   daysWorked: number;
   sickHolidays: number;
@@ -19,12 +20,15 @@ interface QuickStats {
   totalDays: number;
 }
 
-// Generate mock stats
-const generateQuickStats = (): QuickStats => {
-  const daysWorked = 18;
-  const sickHolidays = 1;
-  const personalLeaves = 2;
-  const absentDays = 1;
+// Generate mock stats for a date range
+const generateQuickStats = (startDate: Date, endDate: Date): QuickStats => {
+  // Mock calculation - in a real app this would fetch from an API
+  const daysDiff = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  
+  const daysWorked = Math.floor(daysDiff * 0.7); // ~70% days worked
+  const sickHolidays = Math.floor(daysDiff * 0.05); // ~5% sick holidays
+  const personalLeaves = Math.floor(daysDiff * 0.1); // ~10% personal leaves
+  const absentDays = Math.floor(daysDiff * 0.05); // ~5% absent days
   const totalDays = daysWorked + sickHolidays + personalLeaves + absentDays;
   
   return {
@@ -38,13 +42,20 @@ const generateQuickStats = (): QuickStats => {
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
-  const [checkedInToday, setCheckedInToday] = useState(false);
-  const [checkedOutToday, setCheckedOutToday] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [quickStats] = useState<QuickStats>(generateQuickStats());
+  
+  // Date range state for quick stats
+  const [dateRange, setDateRange] = useState<{
+    from: Date;
+    to: Date;
+  }>({
+    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1), // First day of current month
+    to: new Date() // Today
+  });
+  
+  const [quickStats, setQuickStats] = useState<QuickStats>(generateQuickStats(dateRange.from, dateRange.to));
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
   useEffect(() => {
     // Update current time every minute
@@ -56,68 +67,15 @@ const Dashboard = () => {
     if (user?.id) {
       const attendance = getTodayAttendance(user.id);
       setTodayAttendance(attendance);
-      setCheckedInToday(!!attendance?.checkIn);
-      setCheckedOutToday(!!attendance?.checkOut);
     }
     
     return () => clearInterval(interval);
   }, [user?.id]);
   
-  const handleCheckIn = () => {
-    setLoading(true);
-    
-    // Simulate API call delay
-    setTimeout(() => {
-      const now = new Date();
-      const todayDate = now.toISOString().split('T')[0];
-      
-      // Check if it's late (after 9:00 AM)
-      const isLate = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 0);
-      
-      const newAttendance: AttendanceRecord = {
-        date: todayDate,
-        checkIn: formatTime(now),
-        checkOut: null,
-        status: isLate ? 'late' : 'present'
-      };
-      
-      setTodayAttendance(newAttendance);
-      setCheckedInToday(true);
-      
-      toast({
-        title: "Check In Successful",
-        description: `You checked in at ${formatTime(now)}${isLate ? ' (Late)' : ''}`,
-      });
-      
-      setLoading(false);
-    }, 1000);
-  };
-  
-  const handleCheckOut = () => {
-    setLoading(true);
-    
-    // Simulate API call delay
-    setTimeout(() => {
-      const now = new Date();
-      
-      if (todayAttendance) {
-        const updatedAttendance = {
-          ...todayAttendance,
-          checkOut: formatTime(now)
-        };
-        
-        setTodayAttendance(updatedAttendance);
-        setCheckedOutToday(true);
-        
-        toast({
-          title: "Check Out Successful",
-          description: `You checked out at ${formatTime(now)}`,
-        });
-      }
-      
-      setLoading(false);
-    }, 1000);
-  };
+  // Update quick stats when date range changes
+  useEffect(() => {
+    setQuickStats(generateQuickStats(dateRange.from, dateRange.to));
+  }, [dateRange]);
   
   const renderAttendanceStatus = () => {
     if (!todayAttendance || todayAttendance.status === 'weekend') {
@@ -170,6 +128,14 @@ const Dashboard = () => {
     );
   };
   
+  const formatDateRange = () => {
+    if (!dateRange.from || !dateRange.to) {
+      return "Select a date range";
+    }
+    
+    return `${format(dateRange.from, "MMM d, yyyy")} - ${format(dateRange.to, "MMM d, yyyy")}`;
+  };
+  
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <Header title="Dashboard" />
@@ -177,7 +143,6 @@ const Dashboard = () => {
       <main className="container mx-auto px-4 py-6">
         <div className="mb-6">
           <h2 className="text-xl font-medium text-gray-800">Welcome, {user?.name}</h2>
-          <p className="text-gray-500">{user?.department} • {user?.position}</p>
         </div>
         
         <Card className="mb-6">
@@ -194,30 +159,40 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             {renderAttendanceStatus()}
-            
-            <div className="mt-6 grid grid-cols-2 gap-4">
-              <Button
-                onClick={handleCheckIn}
-                disabled={checkedInToday || loading}
-                className={checkedInToday ? "bg-gray-400" : "bg-primary"}
-              >
-                Check In
-              </Button>
-              <Button
-                onClick={handleCheckOut}
-                disabled={!checkedInToday || checkedOutToday || loading}
-                className={!checkedInToday || checkedOutToday ? "bg-gray-400" : "bg-primary"}
-              >
-                Check Out
-              </Button>
-            </div>
           </CardContent>
         </Card>
         
         <Card className="mb-6">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Quick Stats</CardTitle>
-            <CardDescription>This month's summary</CardDescription>
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Quick Stats</CardTitle>
+              <CardDescription>Summary for selected period</CardDescription>
+            </div>
+            
+            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="h-8 border-dashed">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formatDateRange()}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange.from}
+                  selected={dateRange}
+                  onSelect={(range) => {
+                    if (range?.from && range?.to) {
+                      setDateRange(range as {from: Date, to: Date});
+                      setIsCalendarOpen(false);
+                    }
+                  }}
+                  numberOfMonths={2}
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-3">
@@ -246,21 +221,6 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <Button 
-            className="bg-primary/90 hover:bg-primary"
-            onClick={() => navigate('/attendance-history')}
-          >
-            View History
-          </Button>
-          <Button 
-            className="bg-primary/90 hover:bg-primary"
-            onClick={() => navigate('/leaves')}
-          >
-            View Leaves
-          </Button>
-        </div>
       </main>
       
       <Navigation />

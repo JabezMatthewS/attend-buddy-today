@@ -1,7 +1,7 @@
 
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Calendar, Clock, FileText } from 'lucide-react';
+import { CalendarDays, Clock, FileText } from 'lucide-react';
 
 const Navigation = () => {
   const location = useLocation();
@@ -16,7 +16,7 @@ const Navigation = () => {
     {
       name: 'History',
       path: '/attendance-history',
-      icon: <Calendar className="h-6 w-6" />
+      icon: <CalendarDays className="h-6 w-6" />
     },
     {
       name: 'Leaves',
