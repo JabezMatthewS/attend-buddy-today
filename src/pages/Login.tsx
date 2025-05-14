@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Clock } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from "@/components/ui/use-toast";
-import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
   // Employee login state
@@ -41,29 +40,18 @@ const Login = () => {
     setAdminLoading(true);
     
     try {
-      // For demo purposes, we'll check against the admin_users table directly
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('email', adminEmail)
-        .single();
+      // Mock admin authentication
+      const mockAdmins = [
+        { id: '1', email: 'admin@company.com', password: 'admin123' }
+      ];
       
-      if (error) {
-        toast({
-          title: "Authentication Error",
-          description: "Admin user not found",
-          variant: "destructive"
-        });
-        return;
-      }
+      const admin = mockAdmins.find(a => a.email === adminEmail && a.password === adminPassword);
       
-      // In production, use proper password hashing comparison
-      // This is just for demo
-      if (data && data.password === adminPassword) {
-        // Store admin login state
+      if (admin) {
+        // Store admin info in local storage
         localStorage.setItem('adminUser', JSON.stringify({
-          id: data.id,
-          email: data.email
+          id: admin.id,
+          email: admin.email
         }));
         
         toast({
@@ -74,7 +62,7 @@ const Login = () => {
         navigate('/admin/dashboard');
       } else {
         toast({
-          title: "Authentication Failed",
+          title: "Login Failed",
           description: "Invalid email or password",
           variant: "destructive"
         });

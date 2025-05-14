@@ -9,13 +9,120 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      admins: {
+        Row: {
+          admin_id: string
+          created_at: string | null
+          id: string
+          name: string | null
+          password_hash: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          password_hash: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          password_hash?: string
+        }
+        Relationships: []
+      }
+      attendance: {
+        Row: {
+          date: string
+          employee_code: string
+          id: string
+          inserted_at: string | null
+          status: string
+          time_in: string | null
+          time_out: string | null
+        }
+        Insert: {
+          date: string
+          employee_code: string
+          id?: string
+          inserted_at?: string | null
+          status: string
+          time_in?: string | null
+          time_out?: string | null
+        }
+        Update: {
+          date?: string
+          employee_code?: string
+          id?: string
+          inserted_at?: string | null
+          status?: string
+          time_in?: string | null
+          time_out?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_employee_code_fkey"
+            columns: ["employee_code"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["employee_code"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          created_at: string | null
+          department: string | null
+          employee_code: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          department?: string | null
+          employee_code: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          department?: string | null
+          employee_code?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_admin_stats: {
+        Args: { p_period: string }
+        Returns: {
+          total_present: number
+          total_absent: number
+          total_leaves: number
+          total_late: number
+        }[]
+      }
+      get_dashboard_summary: {
+        Args: { p_employee: string; p_from: string; p_to: string }
+        Returns: {
+          today_status: string
+          today_in: string
+          today_out: string
+          days_worked: number
+          sh_count: number
+          pl_count: number
+          cl_count: number
+          absent_count: number
+          wo_count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

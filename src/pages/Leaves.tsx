@@ -1,168 +1,125 @@
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import Header from '@/components/Header';
-import Navigation from '@/components/Navigation';
-import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { format, subDays, compareAsc } from 'date-fns';
+import { ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-interface Leave {
-  id: string;
+interface LeaveRecord {
   date: string;
-  type: 'PL' | 'CL' | 'SL' | 'OD' | 'Other';
+  type: 'pl' | 'sh' | 'cl' | 'absent' | 'wo';
   reason: string;
-  approved: boolean;
 }
 
-// Function to generate mock leave data
-const generateMockLeaves = (userId: string): Leave[] => {
-  const leaves: Leave[] = [];
-  const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
-
-  // Generate leaves for past 6 months
-  for (let month = 0; month < 6; month++) {
-    const monthDate = new Date(currentYear, currentDate.getMonth() - month, 1);
-    const leaveCount = Math.floor(Math.random() * 3); // 0-2 leaves per month
-    
-    for (let i = 0; i < leaveCount; i++) {
-      const leaveTypes = ['PL', 'CL', 'SL', 'OD', 'Other'] as const;
-      const type = leaveTypes[Math.floor(Math.random() * leaveTypes.length)];
-      const day = Math.floor(Math.random() * 28) + 1;
-      const date = new Date(monthDate.getFullYear(), monthDate.getMonth(), day);
+const Leaves = () => {
+  const navigate = useNavigate();
+  
+  // Filter state
+  const [fromDate, setFromDate] = useState<Date | undefined>(subDays(new Date(), 60));
+  const [toDate, setToDate] = useState<Date | undefined>(new Date());
+  const [leaveType, setLeaveType] = useState<string>("all");
+  
+  // Mock leave data
+  const mockLeaves: LeaveRecord[] = [
+    { date: '2023-05-03', type: 'pl', reason: 'Personal leave' },
+    { date: '2023-05-06', type: 'wo', reason: 'Week off' },
+    { date: '2023-05-07', type: 'wo', reason: 'Week off' },
+    { date: '2023-04-15', type: 'sh', reason: 'Sick leave' },
+    { date: '2023-04-22', type: 'cl', reason: 'Casual leave' },
+    { date: '2023-04-29', type: 'wo', reason: 'Week off' },
+    { date: '2023-04-30', type: 'wo', reason: 'Week off' },
+    { date: '2023-03-18', type: 'pl', reason: 'Personal leave' },
+    { date: '2023-03-25', type: 'absent', reason: 'Unplanned absence' },
+  ];
+  
+  // Function to filter and group records by month
+  const getFilteredAndGroupedRecords = () => {
+    // Filter records by date range and type
+    const filtered = mockLeaves.filter(record => {
+      const date = new Date(record.date);
+      const matchesDateRange = (!fromDate || compareAsc(date, fromDate) >= 0) && 
+                              (!toDate || compareAsc(date, toDate) <= 0);
+      const matchesType = leaveType === 'all' || record.type === leaveType;
       
-      let reason = '';
-      switch(type) {
-        case 'PL':
-          reason = 'Personal leave';
-          break;
-        case 'CL':
-          reason = 'Casual leave';
-          break;
-        case 'SL':
-          reason = 'Sick leave - Fever';
-          break;
-        case 'OD':
-          reason = 'Official duty - Client meeting';
-          break;
-        case 'Other':
-          reason = 'Family function';
-          break;
+      return matchesDateRange && matchesType;
+    });
+      
+    // Group by month
+    const grouped = filtered.reduce((acc, record) => {
+      const date = new Date(record.date);
+      const month = format(date, 'MMMM yyyy');
+      
+      if (!acc[month]) {
+        acc[month] = [];
       }
       
-      leaves.push({
-        id: `${userId}-${date.getTime()}`,
-        date: date.toISOString().split('T')[0],
-        type,
-        reason,
-        approved: Math.random() > 0.2 // 80% chance of approval
-      });
-    }
-  }
-
-  // Sort leaves by date (newest first)
-  return leaves.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-};
-
-const getLeaveTypeColor = (type: Leave['type']): string => {
-  switch(type) {
-    case 'PL':
-      return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
-    case 'CL':
-      return 'bg-green-100 text-green-800 hover:bg-green-200';
-    case 'SL':
-      return 'bg-red-100 text-red-800 hover:bg-red-200';
-    case 'OD':
-      return 'bg-amber-100 text-amber-800 hover:bg-amber-200';
-    case 'Other':
-      return 'bg-purple-100 text-purple-800 hover:bg-purple-200';
-  }
-};
-
-const Leaves = () => {
-  const { user } = useAuth();
-  const [leaves, setLeaves] = useState<Leave[]>([]);
-  const [filteredLeaves, setFilteredLeaves] = useState<Leave[]>([]);
-  const [fromDate, setFromDate] = useState<Date | undefined>();
-  const [toDate, setToDate] = useState<Date | undefined>();
-  
-  useEffect(() => {
-    if (user?.id) {
-      const mockLeaves = generateMockLeaves(user.id);
-      setLeaves(mockLeaves);
-      setFilteredLeaves(mockLeaves);
-    }
-  }, [user?.id]);
-  
-  useEffect(() => {
-    // Filter leaves based on selected date range
-    if (fromDate || toDate) {
-      const filtered = leaves.filter(leave => {
-        const leaveDate = new Date(leave.date);
-        
-        if (fromDate && toDate) {
-          return leaveDate >= fromDate && leaveDate <= toDate;
-        } else if (fromDate) {
-          return leaveDate >= fromDate;
-        } else if (toDate) {
-          return leaveDate <= toDate;
-        }
-        
-        return true;
-      });
-      
-      setFilteredLeaves(filtered);
-    } else {
-      setFilteredLeaves(leaves);
-    }
-  }, [fromDate, toDate, leaves]);
-  
-  const resetFilters = () => {
-    setFromDate(undefined);
-    setToDate(undefined);
+      acc[month].push(record);
+      return acc;
+    }, {} as Record<string, LeaveRecord[]>);
+    
+    // Sort each month's records by date
+    Object.keys(grouped).forEach(month => {
+      grouped[month].sort((a, b) => compareAsc(new Date(b.date), new Date(a.date)));
+    });
+    
+    return grouped;
   };
   
-  // Group leaves by month
-  const groupedLeaves: Record<string, Leave[]> = {};
-  filteredLeaves.forEach(leave => {
-    const date = new Date(leave.date);
-    const monthYear = format(date, 'MMMM yyyy');
-    
-    if (!groupedLeaves[monthYear]) {
-      groupedLeaves[monthYear] = [];
+  const groupedRecords = getFilteredAndGroupedRecords();
+  
+  const getLeaveTypeBadge = (type: string) => {
+    switch (type) {
+      case 'pl':
+        return <Badge className="bg-blue-100 text-blue-800">Paid Leave</Badge>;
+      case 'sh':
+        return <Badge className="bg-amber-100 text-amber-800">Sick Holiday</Badge>;
+      case 'cl':
+        return <Badge className="bg-purple-100 text-purple-800">Casual Leave</Badge>;
+      case 'absent':
+        return <Badge className="bg-red-100 text-red-800">Absent</Badge>;
+      case 'wo':
+        return <Badge className="bg-gray-100 text-gray-800">Week Off</Badge>;
+      default:
+        return <Badge>{type}</Badge>;
     }
-    groupedLeaves[monthYear].push(leave);
-  });
+  };
   
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <Header title="Leave History" />
+    <div className="min-h-screen bg-gray-50 pb-12">
+      {/* Header */}
+      <header className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+            <h1 className="text-xl font-semibold text-gray-900">Leaves</h1>
+          </div>
+        </div>
+      </header>
       
-      <main className="container mx-auto px-4 py-6">
-        <Card className="mb-6">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Date Filter</CardTitle>
-            <CardDescription>
-              Select a date range to filter
-            </CardDescription>
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6">
+        {/* Filters */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Filters</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-3">
-              <div className="flex flex-col">
-                <span className="text-sm font-medium mb-1">From Date</span>
+            <div className="flex flex-wrap gap-4">
+              <div>
+                <div className="text-sm font-medium mb-2">From Date</div>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
-                      {fromDate ? format(fromDate, 'MMM d, yyyy') : (
-                        <span className="text-muted-foreground">Pick a date</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    <Button variant="outline">
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                      {fromDate ? format(fromDate, 'MMM dd, yyyy') : 'Select date'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -176,16 +133,13 @@ const Leaves = () => {
                   </PopoverContent>
                 </Popover>
               </div>
-              
-              <div className="flex flex-col">
-                <span className="text-sm font-medium mb-1">To Date</span>
+              <div>
+                <div className="text-sm font-medium mb-2">To Date</div>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
-                      {toDate ? format(toDate, 'MMM d, yyyy') : (
-                        <span className="text-muted-foreground">Pick a date</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    <Button variant="outline">
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                      {toDate ? format(toDate, 'MMM dd, yyyy') : 'Select date'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -193,88 +147,74 @@ const Leaves = () => {
                       mode="single"
                       selected={toDate}
                       onSelect={setToDate}
+                      disabled={(date) => date < (fromDate || new Date())}
                       initialFocus
                       className="p-3 pointer-events-auto"
-                      disabled={(date) => fromDate ? date < fromDate : false}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
-              
-              <div className="flex items-end">
-                <Button 
-                  variant="ghost" 
-                  onClick={resetFilters} 
-                  className="h-10"
-                  disabled={!fromDate && !toDate}
-                >
-                  Reset
-                </Button>
+              <div>
+                <div className="text-sm font-medium mb-2">Leave Type</div>
+                <Select value={leaveType} onValueChange={setLeaveType}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select leave type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="pl">Paid Leave (PL)</SelectItem>
+                    <SelectItem value="sh">Sick Holiday (SH)</SelectItem>
+                    <SelectItem value="cl">Casual Leave (CL)</SelectItem>
+                    <SelectItem value="wo">Week Off (WO)</SelectItem>
+                    <SelectItem value="absent">Absent</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-            
-            <div className="mt-2">
-              {fromDate && toDate ? (
-                <p className="text-sm text-muted-foreground">
-                  Showing results from {format(fromDate, 'MMM d, yyyy')} to {format(toDate, 'MMM d, yyyy')}
-                </p>
-              ) : fromDate ? (
-                <p className="text-sm text-muted-foreground">
-                  Showing results from {format(fromDate, 'MMM d, yyyy')} onwards
-                </p>
-              ) : toDate ? (
-                <p className="text-sm text-muted-foreground">
-                  Showing results until {format(toDate, 'MMM d, yyyy')}
-                </p>
-              ) : null}
             </div>
           </CardContent>
         </Card>
         
-        {Object.keys(groupedLeaves).length > 0 ? (
-          Object.keys(groupedLeaves).map(month => (
-            <Card key={month} className="mb-6">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">{month}</CardTitle>
-                <CardDescription>Leave history</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-0">
-                  {groupedLeaves[month].map((leave, index) => (
-                    <div key={leave.id}>
-                      <div className="flex justify-between items-center py-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{format(new Date(leave.date), 'EEE, MMM d')}</p>
-                            <Badge className={getLeaveTypeColor(leave.type)}>
-                              {leave.type}
-                            </Badge>
-                            {leave.approved ? (
-                              <Badge className="bg-green-100 text-green-800">Approved</Badge>
-                            ) : (
-                              <Badge className="bg-gray-100 text-gray-800">Pending</Badge>
-                            )}
+        {/* Leave Records by Month */}
+        <div className="space-y-6">
+          {Object.keys(groupedRecords).length > 0 ? (
+            Object.keys(groupedRecords).map((month) => (
+              <Card key={month} className="overflow-hidden">
+                <CardHeader className="bg-gray-50">
+                  <CardTitle>{month}</CardTitle>
+                  <CardDescription>
+                    {groupedRecords[month].length} records
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y divide-gray-200">
+                    {groupedRecords[month].map((record, idx) => (
+                      <div key={`${record.date}-${idx}`} className="p-4 hover:bg-gray-50">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="font-medium">
+                              {format(new Date(record.date), 'EEEE, MMMM d, yyyy')}
+                            </div>
+                            <div className="text-sm text-gray-500 mt-1">
+                              {record.reason}
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-500">{leave.reason}</p>
+                          <div>
+                            {getLeaveTypeBadge(record.type)}
+                          </div>
                         </div>
                       </div>
-                      {index < groupedLeaves[month].length - 1 && <Separator />}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          <Card>
-            <CardContent className="p-6 flex justify-center items-center">
-              <p className="text-gray-500">No leave history found</p>
-            </CardContent>
-          </Card>
-        )}
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No leave records found for the selected criteria.</p>
+            </div>
+          )}
+        </div>
       </main>
-      
-      <Navigation />
     </div>
   );
 };
