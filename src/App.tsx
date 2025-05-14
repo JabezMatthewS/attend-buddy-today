@@ -12,6 +12,9 @@ import Dashboard from "./pages/Dashboard";
 import AttendanceHistory from "./pages/AttendanceHistory";
 import Leaves from "./pages/Leaves";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import EmployeeManagement from "./pages/admin/EmployeeManagement";
+import AttendanceManagement from "./pages/admin/AttendanceManagement";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +43,10 @@ const App = () => (
                 <Leaves />
               </ProtectedRoute>
             } />
+            {/* Admin Routes */}
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/employees" element={<EmployeeManagement />} />
+            <Route path="/admin/attendance" element={<AttendanceManagement />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
