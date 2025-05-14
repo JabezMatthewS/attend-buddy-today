@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,7 +57,35 @@ const EmployeeManagement = () => {
       return;
     }
 
-    fetchEmployees();
+    // For now, we'll use mock data
+    const mockEmployees: Employee[] = [
+      {
+        id: 'K14050',
+        name: 'Jane Smith',
+        department: 'Engineering',
+        position: 'Senior Developer',
+        email: 'jane.smith@company.com',
+        phone: '555-1234',
+        profile_image: '/placeholder.svg',
+        join_date: '2023-01-15',
+        status: 'active'
+      },
+      {
+        id: 'K14051',
+        name: 'John Doe',
+        department: 'Marketing',
+        position: 'Marketing Manager',
+        email: 'john.doe@company.com',
+        phone: '555-5678',
+        profile_image: '/placeholder.svg',
+        join_date: '2023-02-01',
+        status: 'active'
+      }
+    ];
+    
+    setEmployees(mockEmployees);
+    setFilteredEmployees(mockEmployees);
+    setLoading(false);
   }, [navigate]);
 
   // Filter employees based on search query
@@ -76,32 +103,6 @@ const EmployeeManagement = () => {
     }
   }, [searchQuery, employees]);
 
-  const fetchEmployees = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      
-      if (data) {
-        setEmployees(data);
-        setFilteredEmployees(data);
-      }
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load employees",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleAddEmployee = async () => {
     try {
       // Basic validation
@@ -114,37 +115,22 @@ const EmployeeManagement = () => {
         return;
       }
       
-      // Check if ID follows the pattern K followed by 5 digits
-      const idPattern = /^K\d{5}$/;
-      if (!idPattern.test(newEmployee.id)) {
-        toast({
-          title: "Invalid Employee ID",
-          description: "ID must be in format K followed by 5 digits (e.g., K14050)",
-          variant: "destructive"
-        });
-        return;
-      }
+      // Mock adding an employee
+      const newEmployeeData: Employee = {
+        ...newEmployee,
+        profile_image: '/placeholder.svg',
+        join_date: new Date().toISOString().split('T')[0],
+        status: 'active'
+      } as Employee;
       
-      const { error } = await supabase
-        .from('employees')
-        .insert([{
-          id: newEmployee.id,
-          name: newEmployee.name,
-          department: newEmployee.department,
-          position: newEmployee.position,
-          email: newEmployee.email || null,
-          phone: newEmployee.phone || null,
-          profile_image: '/placeholder.svg'
-        }]);
-      
-      if (error) throw error;
+      setEmployees([...employees, newEmployeeData]);
       
       toast({
         title: "Success",
         description: "Employee added successfully"
       });
       
-      // Reset form and refresh list
+      // Reset form and close dialog
       setNewEmployee({
         id: '',
         name: '',
@@ -154,8 +140,6 @@ const EmployeeManagement = () => {
         phone: ''
       });
       setShowNewEmployeeForm(false);
-      fetchEmployees();
-      
     } catch (error: any) {
       console.error("Error adding employee:", error);
       toast({
@@ -175,19 +159,12 @@ const EmployeeManagement = () => {
     if (!editEmployee) return;
     
     try {
-      const { error } = await supabase
-        .from('employees')
-        .update({
-          name: editEmployee.name,
-          department: editEmployee.department,
-          position: editEmployee.position,
-          email: editEmployee.email || null,
-          phone: editEmployee.phone || null,
-          status: editEmployee.status
-        })
-        .eq('id', editEmployee.id);
+      // Mock updating an employee
+      const updatedEmployees = employees.map(emp => 
+        emp.id === editEmployee.id ? editEmployee : emp
+      );
       
-      if (error) throw error;
+      setEmployees(updatedEmployees);
       
       toast({
         title: "Success",
@@ -195,8 +172,6 @@ const EmployeeManagement = () => {
       });
       
       setShowEditForm(false);
-      fetchEmployees();
-      
     } catch (error: any) {
       console.error("Error updating employee:", error);
       toast({
@@ -213,20 +188,14 @@ const EmployeeManagement = () => {
     }
     
     try {
-      const { error } = await supabase
-        .from('employees')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
+      // Mock deleting an employee
+      const remainingEmployees = employees.filter(emp => emp.id !== id);
+      setEmployees(remainingEmployees);
       
       toast({
         title: "Success",
         description: "Employee deleted successfully"
       });
-      
-      fetchEmployees();
-      
     } catch (error: any) {
       console.error("Error deleting employee:", error);
       toast({

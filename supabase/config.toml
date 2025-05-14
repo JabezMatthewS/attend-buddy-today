@@ -1,1 +1,6 @@
+
 project_id = "notvufknqzidbinccbim"
+
+[db]
+# Add the tables we're using so the TypeScript types get generated properly
+tables = ["admin_users", "employees", "attendance_records"]

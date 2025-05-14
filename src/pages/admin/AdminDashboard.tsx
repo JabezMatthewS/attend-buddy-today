@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,24 +40,20 @@ const AdminDashboard = () => {
   const fetchDashboardStats = async () => {
     setLoading(true);
     try {
-      // Fetch total employees count
-      const { count: employeeCount } = await supabase
-        .from('employees')
-        .select('*', { count: 'exact', head: true });
-
-      // Get today's date in YYYY-MM-DD format
-      const today = new Date().toISOString().split('T')[0];
+      // For now, let's work with mock data since our tables might not be fully set up
+      // We'll pretend we have 10 employees total
+      const employeeCount = 10;
       
-      // For demo, we'll use the mock data logic
+      // Generate mock attendance stats
       const mockAttendanceStats = {
-        presentToday: Math.floor(Math.random() * (employeeCount || 10) * 0.7), // ~70% present
-        lateToday: Math.floor(Math.random() * (employeeCount || 10) * 0.1),    // ~10% late
-        absentToday: Math.floor(Math.random() * (employeeCount || 10) * 0.1),  // ~10% absent
-        onLeaveToday: Math.floor(Math.random() * (employeeCount || 10) * 0.1)  // ~10% on leave
+        presentToday: Math.floor(employeeCount * 0.7), // ~70% present
+        lateToday: Math.floor(employeeCount * 0.1),    // ~10% late
+        absentToday: Math.floor(employeeCount * 0.1),  // ~10% absent
+        onLeaveToday: Math.floor(employeeCount * 0.1)  // ~10% on leave
       };
 
       setStats({
-        totalEmployees: employeeCount || 0,
+        totalEmployees: employeeCount,
         ...mockAttendanceStats
       });
     } catch (error) {

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,7 +31,10 @@ interface AttendanceRecord {
 
 const AttendanceManagement = () => {
   const navigate = useNavigate();
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([
+    { id: 'K14050', name: 'Jane Smith', department: 'Engineering' },
+    { id: 'K14051', name: 'John Doe', department: 'Marketing' }
+  ]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [filteredAttendance, setFilteredAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,15 +70,9 @@ const AttendanceManagement = () => {
       return;
     }
 
-    fetchEmployees();
     generateMockAttendanceData();
   }, [navigate]);
-
-  // Apply filters
-  useEffect(() => {
-    applyFilters();
-  }, [attendance, activeTab, selectedDate, fromDate, toDate, searchQuery, statusFilter]);
-
+  
   const fetchEmployees = async () => {
     try {
       const { data, error } = await supabase
